@@ -3,7 +3,7 @@
 
 比如NavigationController里面，我hook出400多个方法，恐怖吧，VC里面更多
 
-
+```c
 .cxx_destruct=v16@0:8,
  dealloc=v16@0:8,
  setDelegate:=v24@0:8@16,
@@ -435,3 +435,4 @@
  delegate=@16@0:8,
  setPreferredContentSize:=v32@0:8{CGSize=dd}16,
  becomeFirstResponder=B16@0:8
+```
