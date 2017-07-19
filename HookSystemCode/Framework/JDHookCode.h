@@ -30,6 +30,8 @@
 
 @interface JDCode : NSObject
 @property (nonatomic,strong) JDCode *superCode;
+
+@property (nonatomic,copy) NSString *className;
 @property (nonatomic,strong) NSArray<JDProperty *> *propertys;
 @property (nonatomic,strong) NSArray<JDVar *> *vars;
 @property (nonatomic,strong) NSArray<JDMethod *> *methods;

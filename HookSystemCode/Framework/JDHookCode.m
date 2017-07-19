@@ -11,7 +11,7 @@
 
 struct jd_objc_method {
     SEL method_name;        // 方法名称
-    const char *method_typesE;    // 参数和返回类型的描述字串
+    const char *method_types;    // 参数和返回类型的描述字串
     IMP method_imp;         // 方法的具体的实现的指针
 };
 
@@ -90,23 +90,25 @@ struct jd_objc_method {
 }
 
 + (JDCode *)hookClassWithSuper:(NSObject *)obj {
-
-    JDCode *code = [self hookClass:obj];
-    
     Class clss = object_getClass(obj);
-    Class superClass = class_getSuperclass(clss);
-    JDCode *currentCode = code;
-    while (superClass) {
-        JDCode *c = [self hookClass:obj class:superClass];
+    JDCode *code = nil;
+    JDCode *currentCode = nil;
+    do{
+        JDCode *c = [self hookClass:obj class:clss];
+        if(code == nil){
+            code = c;
+        }
         currentCode.superCode = c;
         currentCode = c;
-        superClass = class_getSuperclass(superClass);
-    }
+        clss = class_getSuperclass(clss);
+    }while (clss);
+    
     return code;
 }
 
 + (JDCode *)hookClass:(NSObject *)obj class:(Class)clss {
     JDCode *code = [[JDCode alloc] init];
+    code.className = NSStringFromClass(clss);
     unsigned int methodCount;
     Method *methods = class_copyMethodList(clss, &methodCount);
     unsigned int propertyCount;
@@ -121,7 +123,7 @@ struct jd_objc_method {
         struct jd_objc_method *m = (struct jd_objc_method *)method;
         JDMethod *jdM = [[JDMethod alloc] init];
         jdM.sel  = m->method_name;
-        jdM.type = [NSString stringWithUTF8String:m->method_typesE];
+        jdM.type = [NSString stringWithUTF8String:m->method_types];
         jdM.imp = m->method_imp;
         [methodArray addObject:jdM];
     }
