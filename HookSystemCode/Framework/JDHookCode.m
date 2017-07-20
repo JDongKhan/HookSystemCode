@@ -162,36 +162,6 @@ struct jd_objc_method {
     return str;
 }
 
-
-
-@end
-
-
-@implementation JDHookCode
-
-
-+ (JDClass *)hookClass:(NSObject *)obj {
-    Class clss = object_getClass(obj);
-    return  [self hookClass:obj class:clss];
-}
-
-+ (JDClass *)hookClassWithSuper:(NSObject *)obj {
-    Class clss = object_getClass(obj);
-    JDClass *code = nil;
-    JDClass *currentCode = nil;
-    do{
-        JDClass *c = [self hookClass:obj class:clss];
-        if(code == nil){
-            code = c;
-        }
-        currentCode.superCode = c;
-        currentCode = c;
-        clss = class_getSuperclass(clss);
-    }while (clss);
-    
-    return code;
-}
-
 + (JDClass *)hookClass:(NSObject *)obj class:(Class)clss {
     JDClass *code = [[JDClass alloc] init];
     code.className = NSStringFromClass(clss);
@@ -231,8 +201,38 @@ struct jd_objc_method {
     free(properties);
     free(ivars);
     return code;
-
+    
 }
+
+@end
+
+
+@implementation JDHookCode
+
+
++ (JDClass *)hookClass:(NSObject *)obj {
+    Class clss = object_getClass(obj);
+    return  [JDClass hookClass:obj class:clss];
+}
+
++ (JDClass *)hookClassWithSuper:(NSObject *)obj {
+    Class clss = object_getClass(obj);
+    JDClass *code = nil;
+    JDClass *currentCode = nil;
+    do{
+        JDClass *c = [JDClass hookClass:obj class:clss];
+        if(code == nil){
+            code = c;
+        }
+        currentCode.superCode = c;
+        currentCode = c;
+        clss = class_getSuperclass(clss);
+    }while (clss);
+    
+    return code;
+}
+
+
 
 
 

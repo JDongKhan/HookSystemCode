@@ -58,6 +58,8 @@
 
 @interface JDHookCode : NSObject
 
+//hook某个类
 + (JDClass *_Nullable)hookClass:(NSObject *_Nullable)obj;
+//hook某个类以及这个类的父类、祖父类
 + (JDClass *_Nullable)hookClassWithSuper:(NSObject *_Nullable)obj;
 @end
