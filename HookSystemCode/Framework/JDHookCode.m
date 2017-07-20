@@ -211,26 +211,55 @@ struct jd_objc_method {
 
 
 + (JDClass *)hookClass:(NSObject *)obj {
-    Class clss = object_getClass(obj);
-    return  [JDClass hookClass:obj class:clss];
+   return [JDHookCode hookClass:obj supportSuper:NO];
 }
 
 + (JDClass *)hookClassWithSuper:(NSObject *)obj {
-    Class clss = object_getClass(obj);
-    JDClass *code = nil;
-    JDClass *currentCode = nil;
-    do{
-        JDClass *c = [JDClass hookClass:obj class:clss];
-        if(code == nil){
-            code = c;
-        }
-        currentCode.superCode = c;
-        currentCode = c;
-        clss = class_getSuperclass(clss);
-    }while (clss);
+    return [JDHookCode hookClass:obj supportSuper:YES];
+}
+
+
+
++ (JDClass *)hookClass:(NSObject *)obj supportSuper:(BOOL)supportSuper{
+    if (!obj) return nil;
     
+    Class clss = object_getClass(obj);
+    static CFMutableDictionaryRef classCache;
+    static dispatch_once_t onceToken;
+    static dispatch_semaphore_t lock;
+    dispatch_once(&onceToken, ^{
+        classCache = CFDictionaryCreateMutable(CFAllocatorGetDefault(), 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+        lock = dispatch_semaphore_create(1);
+    });
+    dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+    __weak id key = obj;
+    JDClass *code = CFDictionaryGetValue(classCache, (__bridge const void *)(key));
+    dispatch_semaphore_signal(lock);
+    if(supportSuper && code.superCode == nil)code = nil;
+    if (!code) {
+        //hook
+        JDClass *currentCode = nil;
+        do{
+            JDClass *c = [JDClass hookClass:obj class:clss];
+            if(code == nil){
+                code = c;
+            }
+            if(!supportSuper)break;
+            currentCode.superCode = c;
+            currentCode = c;
+            clss = class_getSuperclass(clss);
+        }while (clss);
+        
+        
+        if (code) {
+            dispatch_semaphore_wait(lock, DISPATCH_TIME_FOREVER);
+            CFDictionarySetValue(classCache, (__bridge const void *)(key), (__bridge const void *)(code));
+            dispatch_semaphore_signal(lock);
+        }
+    }
     return code;
 }
+
 
 
 

@@ -12,54 +12,54 @@
 
 @interface JDProperty : NSObject
 
-@property (nonatomic, assign, readonly) objc_property_t _Nullable property;
+@property (nonatomic, assign, readonly) objc_property_t property;
 
-@property (nonatomic, copy, readonly) NSString * _Nullable name;
-@property (nonatomic, strong, readonly) id _Nullable value;
-@property (nonatomic, strong, readonly) NSString * _Nullable typeEncoding;
-@property (nonatomic, assign, readonly) SEL _Nullable getter;
-@property (nonatomic, assign, readonly) SEL _Nullable setter;
+@property (nonatomic, copy, readonly) NSString *name;
+@property (nonatomic, strong, readonly) id  value;
+@property (nonatomic, strong, readonly) NSString *typeEncoding;
+@property (nonatomic, assign, readonly) SEL getter;
+@property (nonatomic, assign, readonly) SEL setter;
 
-- (instancetype _Nullable )initWithProperty:(objc_property_t _Nullable )property object:(NSObject *_Nullable)obj;
+- (instancetype)initWithProperty:(objc_property_t )property object:(NSObject *)obj;
 
 @end
 
 @interface JDVar : NSObject
-@property (nonatomic, copy, readonly) NSString * _Nullable name;
-@property (nonatomic, strong, readonly) id _Nullable value;
-@property (nonatomic, copy, readonly) NSString * _Nullable type;
-@property (nonatomic, copy) NSString * _Nullable typeEncoding;
-- (instancetype _Nullable )initWithVar:(Ivar _Nullable )var object:(NSObject *_Nullable)obj;
+@property (nonatomic, copy, readonly) NSString *name;
+@property (nonatomic, strong, readonly) id value;
+@property (nonatomic, copy, readonly) NSString *type;
+@property (nonatomic, copy) NSString *typeEncoding;
+- (instancetype)initWithVar:(Ivar)var object:(NSObject *)obj;
 
 @end
 
 @interface JDMethod : NSObject
-@property (nonatomic, strong, readonly) NSString * _Nullable name;
-@property (nonatomic, assign, readonly) SEL _Nullable sel;//方法名称
-@property (nonatomic, assign, readonly) IMP _Nullable imp; // 方法的具体的实现的指针
-@property (nonatomic, copy, readonly) NSString * _Nullable type; // 参数和返回类型的描述字串
-@property (nonatomic, strong, readonly) NSString * _Nullable returnTypeEncoding;
-@property (nullable, nonatomic, strong, readonly) NSArray<NSString *> * argumentTypeEncodings;
+@property (nonatomic, strong, readonly) NSString *name;
+@property (nonatomic, assign, readonly) SEL sel;//方法名称
+@property (nonatomic, assign, readonly) IMP imp; // 方法的具体的实现的指针
+@property (nonatomic, copy, readonly) NSString *type; // 参数和返回类型的描述字串
+@property (nonatomic, strong, readonly) NSString *returnTypeEncoding;
+@property (nonatomic, strong, readonly) NSArray<NSString *> *argumentTypeEncodings;
 
-- (instancetype _Nullable )initWithMethod:(Method _Nullable )method;
+- (instancetype)initWithMethod:(Method)method;
 
 @end
 
 
 @interface JDClass : NSObject
 
-@property (nonatomic, strong) JDClass * _Nullable superCode;
+@property (nonatomic, strong) JDClass *superCode;
 
-@property (nonatomic, copy) NSString * _Nullable className;
-@property (nonatomic, strong) NSArray<JDProperty *> * _Nullable propertys;
-@property (nonatomic, strong) NSArray<JDVar *> * _Nullable vars;
-@property (nonatomic, strong) NSArray<JDMethod *> * _Nullable methods;
+@property (nonatomic, copy) NSString *className;
+@property (nonatomic, strong) NSArray<JDProperty *> *propertys;
+@property (nonatomic, strong) NSArray<JDVar *> *vars;
+@property (nonatomic, strong) NSArray<JDMethod *> *methods;
 @end
 
 @interface JDHookCode : NSObject
 
 //hook某个类
-+ (JDClass *_Nullable)hookClass:(NSObject *_Nullable)obj;
++ (JDClass *)hookClass:(NSObject *)obj;
 //hook某个类以及这个类的父类、祖父类
-+ (JDClass *_Nullable)hookClassWithSuper:(NSObject *_Nullable)obj;
++ (JDClass *)hookClassWithSuper:(NSObject *)obj;
 @end

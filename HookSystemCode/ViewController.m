@@ -19,7 +19,9 @@
     [super viewDidLoad];
     
     //可以获取你想看的类的所有方法 然后通过Method Swizzling 想干任何事
-    JDClass *code = [JDHookCode hookClassWithSuper:self.navigationController];
+      JDClass *code = [JDHookCode hookClass:self.navigationController];
+    JDClass *code1 = [JDHookCode hookClassWithSuper:self.navigationController];
+  
     
     NSLog(@"%@",code);
     
