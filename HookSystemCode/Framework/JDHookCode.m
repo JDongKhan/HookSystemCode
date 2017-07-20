@@ -7,7 +7,7 @@
 //
 
 #import "JDHookCode.h"
-#import <objc/runtime.h>
+
 
 struct jd_objc_method {
     SEL method_name;        // 方法名称
@@ -23,6 +23,40 @@ struct jd_objc_method {
 - (NSString *)debugDescription {
     return [NSString stringWithFormat:@"%@=%@",self.name,self.value];
 }
+- (instancetype)initWithProperty:(objc_property_t)property object:(NSObject *)obj{
+    if (self = [super init]) {
+        _property = property;
+        const char *name = property_getName(property);
+        _name = [NSString stringWithUTF8String:name];
+        if (_name.length) {
+            if (!_getter) {
+                _getter = NSSelectorFromString(_name);
+            }
+            if (!_setter) {
+                _setter = NSSelectorFromString([NSString stringWithFormat:@"set%@%@:", [_name substringToIndex:1].uppercaseString, [_name substringFromIndex:1]]);
+            }
+        }
+        NSString *attrs = @(property_getAttributes(property));
+        NSUInteger dotLoc = [attrs rangeOfString:@","].location;
+        NSString *code = nil;
+        NSUInteger loc = 1;
+        if (dotLoc == NSNotFound) { // 没有,
+            code = [attrs substringFromIndex:loc];
+        } else {
+            code = [attrs substringWithRange:NSMakeRange(loc, dotLoc - loc)];
+        }
+        _typeEncoding = code;
+        
+        @try {
+            _value = [obj valueForKey:_name];
+        } @catch (NSException *exception) {
+            NSLog(@"property[%@] no have value",_name);
+        } @finally {
+        }
+        
+    }
+    return self;
+}
 @end
 @implementation JDVar
 - (NSString *)description {
@@ -30,6 +64,29 @@ struct jd_objc_method {
 }
 - (NSString *)debugDescription {
     return [NSString stringWithFormat:@"%@=%@",self.name,self.value];
+}
+- (instancetype)initWithVar:(Ivar)var object:(NSObject *)obj{
+    if (self = [super init]) {
+        //得到这个成员变量的类型
+        const char *type = ivar_getTypeEncoding(var);
+        NSString *stringType =  [NSString stringWithCString:type encoding:NSUTF8StringEncoding];
+        _type = stringType;
+        //得到成员变量名
+        _name = [NSString stringWithUTF8String:ivar_getName(var)];
+        const char *typeEncoding = ivar_getTypeEncoding(var);
+        if (typeEncoding) {
+            _typeEncoding = [NSString stringWithUTF8String:typeEncoding];
+        }
+        @try {
+            _value = [obj valueForKey:_name];
+        }@catch (NSException *exception) {
+            NSLog(@"var[%@] no have value",_name);
+        } @finally {
+            
+        }
+
+    }
+    return self;
 }
 @end
 @implementation JDMethod
@@ -39,11 +96,40 @@ struct jd_objc_method {
 - (NSString *)debugDescription {
     return [NSString stringWithFormat:@"%@=%@",NSStringFromSelector(self.sel),self.type];
 }
+- (instancetype)initWithMethod:(Method)method {
+    if (self = [super init]) {
+        struct jd_objc_method *m = (struct jd_objc_method *)method;
+        _sel  = m->method_name;
+        _type = [NSString stringWithUTF8String:m->method_types];
+        _imp = m->method_imp;
+        const char *name = sel_getName(_sel);
+        if (name) {
+            _name = [NSString stringWithUTF8String:name];
+        }
+        char *returnType = method_copyReturnType(method);
+        if (returnType) {
+            _returnTypeEncoding = [NSString stringWithUTF8String:returnType];
+            free(returnType);
+        }
+        unsigned int argumentCount = method_getNumberOfArguments(method);
+        if (argumentCount > 0) {
+            NSMutableArray *argumentTypes = [NSMutableArray new];
+            for (unsigned int i = 0; i < argumentCount; i++) {
+                char *argumentType = method_copyArgumentType(method, i);
+                NSString *type = argumentType ? [NSString stringWithUTF8String:argumentType] : nil;
+                [argumentTypes addObject:type ? type : @""];
+                if (argumentType) free(argumentType);
+            }
+            _argumentTypeEncodings = argumentTypes;
+        }
+
+    }
+    return self;
+}
 @end
-@implementation JDCode
 
 
-
+@implementation JDClass
 - (NSString *)description {
     return [self descriptionPrivate];
 }
@@ -84,17 +170,17 @@ struct jd_objc_method {
 @implementation JDHookCode
 
 
-+ (JDCode *)hookClass:(NSObject *)obj {
++ (JDClass *)hookClass:(NSObject *)obj {
     Class clss = object_getClass(obj);
     return  [self hookClass:obj class:clss];
 }
 
-+ (JDCode *)hookClassWithSuper:(NSObject *)obj {
++ (JDClass *)hookClassWithSuper:(NSObject *)obj {
     Class clss = object_getClass(obj);
-    JDCode *code = nil;
-    JDCode *currentCode = nil;
+    JDClass *code = nil;
+    JDClass *currentCode = nil;
     do{
-        JDCode *c = [self hookClass:obj class:clss];
+        JDClass *c = [self hookClass:obj class:clss];
         if(code == nil){
             code = c;
         }
@@ -106,8 +192,8 @@ struct jd_objc_method {
     return code;
 }
 
-+ (JDCode *)hookClass:(NSObject *)obj class:(Class)clss {
-    JDCode *code = [[JDCode alloc] init];
++ (JDClass *)hookClass:(NSObject *)obj class:(Class)clss {
+    JDClass *code = [[JDClass alloc] init];
     code.className = NSStringFromClass(clss);
     unsigned int methodCount;
     Method *methods = class_copyMethodList(clss, &methodCount);
@@ -120,46 +206,21 @@ struct jd_objc_method {
     NSMutableArray *methodArray = [NSMutableArray array];
     for(unsigned int i = 0; i < methodCount;i++){
         Method method = methods[i];
-        struct jd_objc_method *m = (struct jd_objc_method *)method;
-        JDMethod *jdM = [[JDMethod alloc] init];
-        jdM.sel  = m->method_name;
-        jdM.type = [NSString stringWithUTF8String:m->method_types];
-        jdM.imp = m->method_imp;
+        JDMethod *jdM = [[JDMethod alloc] initWithMethod:method];
         [methodArray addObject:jdM];
     }
     //处理属性
     NSMutableArray *propertyArray = [NSMutableArray array];
     for(unsigned int i = 0; i < propertyCount;i++){
         objc_property_t property = properties[i];
-        const char *name = property_getName(property);
-        JDProperty *p = [[JDProperty alloc] init];
-        p.name = [NSString stringWithUTF8String:name];
-        @try {
-             p.value = [obj valueForKey:p.name];
-        } @catch (NSException *exception) {
-            NSLog(@"property[%@] no have value",p.name);
-        } @finally {
-        }
-       
+        JDProperty *p = [[JDProperty alloc] initWithProperty:property object:obj];
         [propertyArray addObject:p];
     }
     //处理变量
     NSMutableArray *varArray = [NSMutableArray array];
     for(unsigned int i = 0; i < varCount;i++){
         Ivar var = ivars[i];
-        JDVar *v = [[JDVar alloc] init];
-        //得到这个成员变量的类型
-        const char *type = ivar_getTypeEncoding(var);
-        NSString *stringType =  [NSString stringWithCString:type encoding:NSUTF8StringEncoding];
-        v.type = stringType;
-        //得到成员变量名
-        v.name = [NSString stringWithUTF8String:ivar_getName(var)];
-        @try {
-            v.value = [obj valueForKey:v.name];
-        }@catch (NSException *exception) {
-             NSLog(@"var[%@] no have value",v.name);
-        } @finally {
-        }
+        JDVar *v = [[JDVar alloc] initWithVar:var object:obj];
         [varArray addObject:v];
     }
     
